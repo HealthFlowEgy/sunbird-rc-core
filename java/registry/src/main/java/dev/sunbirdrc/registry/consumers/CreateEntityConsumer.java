@@ -60,6 +60,9 @@ public class CreateEntityConsumer {
             logger.debug("Received message: {}, key: {}", message, key);
             CreateEntityMessage createEntityMessage = objectMapper.readValue(message, CreateEntityMessage.class);
             JsonNode inputJson = createEntityMessage.getInputJson();
+            if (!inputJson.fields().hasNext()) {
+                throw new IllegalArgumentException("Input JSON has no fields");
+            }
             String entityType = inputJson.fields().next().getKey();
             Shard shard = shardManager.getShard(inputJson.get(entityType).get(shardManager.getShardProperty()));
             String entityOsid = registryService.addEntity(shard, createEntityMessage.getUserId(), inputJson, createEntityMessage.isSkipSignature());
@@ -67,7 +70,7 @@ public class CreateEntityConsumer {
 
         } catch (Exception e) {
             logger.error("Creating entity failed, {}", e.getMessage(), e);
-            postCreateEntityMessage = PostCreateEntityMessage.builder().status(CreateEntityStatus.FAILED).message(e.getMessage()).build();
+            postCreateEntityMessage = PostCreateEntityMessage.builder().status(CreateEntityStatus.FAILED).message("Entity creation failed").build();
         } finally {
             try {
                 kafkaTemplate.send(postCreateEntityTopic, key, objectMapper.writeValueAsString(postCreateEntityMessage));

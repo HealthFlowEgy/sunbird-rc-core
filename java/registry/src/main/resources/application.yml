@@ -28,7 +28,7 @@ notification:
 cors:
   # By default, allowing all domains to access this service. Choose a particular domain,
   # in production. For example, http://otherservice.com:9090, to allow requests from otherservice.com.
-  allowedOrigin: ${cors_allowedOrigin:*}
+  allowedOrigin: ${cors_allowedOrigin:}
 
 perf:
   monitoring:
@@ -221,7 +221,7 @@ keycloak-user:
 claims:
   url: ${claims_url:http://localhost:8081}
 authentication:
-  enabled: ${authentication_enabled:false}
+  enabled: ${authentication_enabled:true}
   publicKey:  ${authentication_publickey:}
   realm:  ${authentication_realm:sunbird-rc}
   url:  ${authentication_url:localhost:8443/auth}

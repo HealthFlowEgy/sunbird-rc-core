@@ -43,25 +43,29 @@ public abstract class AbstractController {
     DefinitionsManager definitionsManager;
 
     @Value("${database.uuidPropertyName}")
-    public String uuidPropertyName;
+    protected String uuidPropertyName;
 
     ResponseEntity<Object> badRequestException(ResponseParams responseParams, Response response, String errorMessage) {
-        logger.info("Error in handling the invite {}", errorMessage);
+        logger.info("Error in handling the request {}", errorMessage);
         responseParams.setStatus(Response.Status.UNSUCCESSFUL);
         responseParams.setErrmsg(errorMessage);
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
     ResponseEntity<Object> internalErrorResponse(ResponseParams responseParams, Response response, Exception ex) {
-        logger.info("Error in handling the invite", ex);
+        logger.info("Error in handling the request", ex);
         responseParams.setStatus(Response.Status.UNSUCCESSFUL);
         responseParams.setErrmsg("Error occurred");
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     ResponseEntity<Object> createUnauthorizedExceptionResponse(Exception e) {
+        return createUnauthorizedExceptionResponse(e, Response.API_ID.NONE);
+    }
+
+    ResponseEntity<Object> createUnauthorizedExceptionResponse(Exception e, Response.API_ID apiId) {
         ResponseParams responseParams = new ResponseParams();
-        Response response = new Response(Response.API_ID.UPDATE, "OK", responseParams);
+        Response response = new Response(apiId, "OK", responseParams);
         responseParams.setErrmsg(e.getMessage());
         responseParams.setStatus(Response.Status.UNSUCCESSFUL);
         return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);

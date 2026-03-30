@@ -280,7 +280,7 @@ public class RegistryHelper {
 
     private boolean isOwner(JsonNode entity, String userId) {
         String osOwner = OSSystemFields.osOwner.toString();
-        return userId != null && (!entity.has(osOwner) || entity.get(osOwner).toString().contains(userId));
+        return userId != null && !userId.isEmpty() && (!entity.has(osOwner) || entity.get(osOwner).toString().contains("\"" + userId + "\""));
     }
 
     /**
@@ -894,16 +894,15 @@ public class RegistryHelper {
 
     private List<AttestationPolicy> getAttestationsFromRegistry(String entityName) {
         try {
-            JsonNode searchRequest = objectMapper.readTree("{\n" +
-                    "    \"entityType\": [\n" +
-                    "        \"" + ATTESTATION_POLICY + "\"\n" +
-                    "    ],\n" +
-                    "    \"filters\": {\n" +
-                    "       \"entity\": {\n" +
-                    "           \"eq\": \"" + entityName + "\"\n" +
-                    "       }\n" +
-                    "    }\n" +
-                    "}");
+            ObjectNode searchRequest = objectMapper.createObjectNode();
+            ArrayNode entityTypeArray = objectMapper.createArrayNode();
+            entityTypeArray.add(ATTESTATION_POLICY);
+            searchRequest.set("entityType", entityTypeArray);
+            ObjectNode filters = objectMapper.createObjectNode();
+            ObjectNode entityFilter = objectMapper.createObjectNode();
+            entityFilter.put("eq", entityName);
+            filters.set("entity", entityFilter);
+            searchRequest.set("filters", filters);
             JsonNode searchResponse = searchEntity(searchRequest);
             return convertJsonNodeToAttestationList(searchResponse);
         } catch (Exception e) {
@@ -946,19 +945,18 @@ public class RegistryHelper {
     }
 
     public List<AttestationPolicy> findAttestationPolicyByEntityAndCreatedBy(String entityName, String userId) throws Exception {
-        JsonNode searchRequest = objectMapper.readTree("{\n" +
-                "    \"entityType\": [\n" +
-                "        \"" + "ATTESTATION_POLICY" + "\"\n" +
-                "    ],\n" +
-                "    \"filters\": {\n" +
-                "       \"entity\": {\n" +
-                "           \"eq\": \"" + entityName + "\"\n" +
-                "       },\n" +
-                "       \"createdBy\": {\n" +
-                "           \"eq\": \"" + userId + "\"\n" +
-                "       }\n" +
-                "    }\n" +
-                "}");
+        ObjectNode searchRequest = objectMapper.createObjectNode();
+        ArrayNode entityTypeArray = objectMapper.createArrayNode();
+        entityTypeArray.add("ATTESTATION_POLICY");
+        searchRequest.set("entityType", entityTypeArray);
+        ObjectNode filters = objectMapper.createObjectNode();
+        ObjectNode entityFilter = objectMapper.createObjectNode();
+        entityFilter.put("eq", entityName);
+        filters.set("entity", entityFilter);
+        ObjectNode createdByFilter = objectMapper.createObjectNode();
+        createdByFilter.put("eq", userId);
+        filters.set("createdBy", createdByFilter);
+        searchRequest.set("filters", filters);
         searchEntity(searchRequest);
         return Collections.emptyList();
     }

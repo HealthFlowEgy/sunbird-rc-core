@@ -29,7 +29,7 @@ import java.util.Set;
 @RestController
 @ConditionalOnProperty("registry.baseAPIS.enable")
 public class RegistryController extends AbstractController {
-    private static Logger logger = LoggerFactory.getLogger(RegistryController.class);
+    private static final Logger logger = LoggerFactory.getLogger(RegistryController.class);
 
     @Autowired
     private RegistryService registryService;
@@ -65,6 +65,7 @@ public class RegistryController extends AbstractController {
             response.setResult("");
             responseParams.setStatus(Response.Status.UNSUCCESSFUL);
             responseParams.setErrmsg(e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -87,11 +88,13 @@ public class RegistryController extends AbstractController {
             response.setResult(null);
             responseParams.setStatus(Response.Status.UNSUCCESSFUL);
             responseParams.setErrmsg(e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
             logger.error("Controller: Exception while deleting entity !", e);
             response.setResult(null);
             responseParams.setStatus(Response.Status.UNSUCCESSFUL);
             responseParams.setErrmsg("Meh ! You encountered an error!");
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -118,6 +121,7 @@ public class RegistryController extends AbstractController {
             response.setResult(result);
             responseParams.setStatus(Response.Status.UNSUCCESSFUL);
             responseParams.setErrmsg(e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -150,6 +154,7 @@ public class RegistryController extends AbstractController {
             logger.error("Read Api Exception occurred ", e);
             responseParams.setErrmsg(e.getMessage());
             responseParams.setStatus(Response.Status.UNSUCCESSFUL);
+            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
         }
 
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -169,6 +174,7 @@ public class RegistryController extends AbstractController {
             logger.error("Read Api Exception occurred ", e);
             responseParams.setErrmsg(e.getMessage());
             responseParams.setStatus(Response.Status.UNSUCCESSFUL);
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -186,6 +192,7 @@ public class RegistryController extends AbstractController {
             logger.error("Read Api Exception occurred ", e);
             responseParams.setErrmsg(e.getMessage());
             responseParams.setStatus(Response.Status.UNSUCCESSFUL);
+            return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
         }
 
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -208,6 +215,7 @@ public class RegistryController extends AbstractController {
             logger.error("RegistryController: Exception while updating entity (without id)!", e);
             responseParams.setStatus(Response.Status.UNSUCCESSFUL);
             responseParams.setErrmsg(e.getMessage());
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

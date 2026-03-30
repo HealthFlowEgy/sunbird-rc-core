@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 public class RegistryDaoImpl implements IRegistryDao {
-    public String uuidPropertyName;
+    private String uuidPropertyName;
     private DefinitionsManager definitionsManager;
     private DatabaseProvider databaseProvider;
     private List<String> privatePropertyList;

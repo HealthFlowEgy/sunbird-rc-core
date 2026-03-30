@@ -15,6 +15,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,8 +39,15 @@ public class ClaimsController {
     @RequestMapping(value = "/api/v1/getClaims", method = RequestMethod.POST)
     public ResponseEntity<List<Claim>> getClaims(@RequestHeader HttpHeaders headers,
                                                  @RequestBody JsonNode requestBody) {
-        String entity = requestBody.get(LOWERCASE_ENTITY).asText();
+        JsonNode entityNode = requestBody.get(LOWERCASE_ENTITY);
+        if (entityNode == null) {
+            return new ResponseEntity<>(Collections.emptyList(), HttpStatus.BAD_REQUEST);
+        }
+        String entity = entityNode.asText();
         JsonNode attestorNode = requestBody.get(ATTESTOR_INFO);
+        if (attestorNode == null) {
+            return new ResponseEntity<>(Collections.emptyList(), HttpStatus.BAD_REQUEST);
+        }
         List<Claim> claims = claimService.findClaimsForAttestor(entity, attestorNode);
         return new ResponseEntity<>(claims, HttpStatus.OK);
     }
@@ -61,7 +70,7 @@ public class ClaimsController {
     }
 
     @RequestMapping(value = "/api/v1/claims", method = RequestMethod.POST)
-    public ResponseEntity<Claim> save(@RequestBody ClaimDTO claimDTO) {
+    public ResponseEntity<Claim> save(@Valid @RequestBody ClaimDTO claimDTO) {
         logger.info("Adding new claimDTO {} ", claimDTO.toString());
         Claim savedClaim = claimService.save(Claim.fromDTO(claimDTO));
         claimService.addNotes(claimDTO.getNotes(), savedClaim, claimDTO.getRequestorName());
@@ -70,6 +79,9 @@ public class ClaimsController {
 
     @RequestMapping(value = "/api/v1/claims/{claimId}", method = RequestMethod.POST)
     public ResponseEntity<Claim> attestClaims(@PathVariable String claimId, @RequestBody JsonNode requestBody) {
+        if (requestBody.get(ATTESTOR_INFO) == null) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
         logger.info("Attesting claim : {}", claimId);
         Claim updatedClaim = claimService.attestClaim(claimId, requestBody);
         return new ResponseEntity<>(updatedClaim, HttpStatus.OK);

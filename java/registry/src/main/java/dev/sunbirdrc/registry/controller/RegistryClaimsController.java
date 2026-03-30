@@ -61,12 +61,15 @@ public class RegistryClaimsController extends AbstractController{
                                                HttpServletRequest request) {
         try {
             JsonNode result = registryHelper.getRequestedUserDetails(request, entityName);
-            JsonNode claims = claimRequestClient.getClaims(result.get(entityName).get(0), entityName);
+            JsonNode entityArray = result.get(entityName);
+            if (entityArray == null || !entityArray.isArray() || entityArray.size() == 0) {
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            }
+            JsonNode claims = claimRequestClient.getClaims(entityArray.get(0), entityName);
             logger.info("Received {} claims", claims.size());
             return new ResponseEntity<>(claims, HttpStatus.OK);
         } catch (Exception e) {
-            logger.error("Fetching claims failed {}", e.getMessage());
-            e.printStackTrace();
+            logger.error("Fetching claims failed", e);
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -76,14 +79,17 @@ public class RegistryClaimsController extends AbstractController{
                                            HttpServletRequest request) {
         try {
             JsonNode result = registryHelper.getRequestedUserDetails(request, entityName);
-            JsonNode claim = claimRequestClient.getClaim(result.get(entityName).get(0), entityName, claimId);
+            JsonNode entityArray = result.get(entityName);
+            if (entityArray == null || !entityArray.isArray() || entityArray.size() == 0) {
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            }
+            JsonNode claim = claimRequestClient.getClaim(entityArray.get(0), entityName, claimId);
             return new ResponseEntity<>(claim, HttpStatus.OK);
         } catch (HttpClientErrorException | HttpServerErrorException e) {
-            logger.error("Fetching claim failed {}", e.getMessage());
-            e.printStackTrace();
+            logger.error("Fetching claim failed", e);
             return new ResponseEntity<>(e.getStatusCode());
         } catch (Exception exception) {
-            exception.printStackTrace();
+            logger.error("Fetching claim failed", exception);
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -98,6 +104,11 @@ public class RegistryClaimsController extends AbstractController{
         try {
             logger.info("Attesting claim {} as  {}", claimId, entityName);
             JsonNode action = requestBody.get("action");
+            if (action == null) {
+                responseParams.setStatus(Response.Status.UNSUCCESSFUL);
+                responseParams.setErrmsg("action field is required");
+                return new ResponseEntity<>(responseParams, HttpStatus.BAD_REQUEST);
+            }
             ObjectNode additionalInputs = generateAdditionInput(claimId, entityName, requestBody, request, action);
 
             final String attestorPlugin = "did:internal:ClaimPluginActor";
@@ -132,7 +143,14 @@ public class RegistryClaimsController extends AbstractController{
     }
 
     @RequestMapping(value = "/api/v1/send")
-    public ResponseEntity<Object> riseAttestation(HttpServletRequest request, @RequestBody JsonNode requestBody)  {
+    public ResponseEntity<Object> raiseAttestation(HttpServletRequest request, @RequestBody JsonNode requestBody)  {
+        if (requestBody.get("entityName") == null || requestBody.get("entityId") == null || requestBody.get("name") == null) {
+            ResponseParams responseParams = new ResponseParams();
+            responseParams.setStatus(Response.Status.UNSUCCESSFUL);
+            responseParams.setErrmsg("Required fields (entityName, entityId, name) must not be null");
+            Response response = new Response(Response.API_ID.SEND, "OK", responseParams);
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
         String entityName = requestBody.get("entityName").asText();
         String entityId = requestBody.get("entityId").asText();
         String attestationName = requestBody.get("name").asText();
@@ -177,8 +195,7 @@ public class RegistryClaimsController extends AbstractController{
             PluginRouter.route(message);
             response.setResult(Collections.singletonMap("attestationOSID", attestationOSID));
         } catch (Exception exception) {
-            logger.error("Exception occurred while saving attestation data {}", exception.getMessage());
-            exception.printStackTrace();
+            logger.error("Exception occurred while saving attestation data", exception);
             responseParams.setErrmsg(exception.getMessage());
             response = new Response(Response.API_ID.SEND, HttpStatus.INTERNAL_SERVER_ERROR.toString(), responseParams);
             return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -200,7 +217,7 @@ public class RegistryClaimsController extends AbstractController{
                 } catch (ServerException | InternalException | XmlParserException | InvalidResponseException
                         | InvalidKeyException | NoSuchAlgorithmException | IOException
                         | ErrorResponseException | InsufficientDataException e) {
-                    e.printStackTrace();
+                    logger.error("Error getting signed URL for file: {}", fileUrl, e);
                 }
             }
             ((ObjectNode)additionalInput).replace("fileUrl", signedUrls);

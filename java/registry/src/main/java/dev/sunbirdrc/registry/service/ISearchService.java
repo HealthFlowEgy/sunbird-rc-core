@@ -59,8 +59,10 @@ public interface ISearchService {
             filterList.add(freeTextFilter);
         }
 
+        int maxLimit = 1000;
         try {
-            searchQuery.setLimit(inputQueryNode.get("limit").asInt());
+            int requestedLimit = inputQueryNode.get("limit").asInt();
+            searchQuery.setLimit(requestedLimit > maxLimit ? maxLimit : requestedLimit);
             searchQuery.setOffset(inputQueryNode.get("offset").asInt());
         } catch (Exception e) {
             logger.warn("Populates SearchQuery for limit/offset(optional): {}", e.getMessage());

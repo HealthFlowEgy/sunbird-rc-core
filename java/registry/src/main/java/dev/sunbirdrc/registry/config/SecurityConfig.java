@@ -5,7 +5,7 @@ import org.keycloak.adapters.springsecurity.KeycloakSecurityComponents;
 import org.keycloak.adapters.springsecurity.authentication.KeycloakAuthenticationProvider;
 import org.keycloak.adapters.springsecurity.config.KeycloakWebSecurityConfigurerAdapter;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -23,8 +23,6 @@ import org.springframework.security.web.authentication.session.SessionAuthentica
 @ComponentScan(basePackageClasses = KeycloakSecurityComponents.class)
 @ConditionalOnProperty(name = "authentication.enabled",havingValue = "true",matchIfMissing = false)
 public class SecurityConfig extends KeycloakWebSecurityConfigurerAdapter {
-
-    @Value("${authentication.enabled:true}") boolean authenticationEnabled;
 
     @Autowired
     public void configureGlobal(AuthenticationManagerBuilder auth) throws Exception {
@@ -51,20 +49,14 @@ public class SecurityConfig extends KeycloakWebSecurityConfigurerAdapter {
     protected void configure(HttpSecurity http) throws Exception {
         super.configure(http);
 
-        HttpSecurity httpConfig = http.csrf().disable();
-        if (authenticationEnabled) {
-            httpConfig.authorizeRequests()
-                    .antMatchers("/**/invite", "/health", "/error",
-                            "/_schemas/**", "/**/templates/**", "/**/*.json", "/**/verify",
-                            "/swagger-ui", "/**/search", "/**/attestation/**",
+        http.csrf().disable()
+                .authorizeRequests()
+                    .antMatchers("/api/v1/*/invite", "/health", "/error",
+                            "/_schemas/**", "/api/v1/*/templates/**", "/api/docs/**/*.json", "/api/v1/*/verify",
+                            "/swagger-ui", "/api/v1/*/search", "/api/v1/*/attestation/**",
                             "/api/docs/swagger.json","/api/docs/*.json", "/plugin/**")
                     .permitAll()
                     .anyRequest()
                     .authenticated();
-        } else {
-            httpConfig.authorizeRequests()
-                    .anyRequest()
-                    .permitAll();
-        }
     }
 }

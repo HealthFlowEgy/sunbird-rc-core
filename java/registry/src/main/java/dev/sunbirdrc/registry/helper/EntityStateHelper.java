@@ -50,13 +50,17 @@ public class EntityStateHelper {
 
     private final ClaimRequestClient claimRequestClient;
 
+    private final ObjectMapper objectMapper;
+
     @Autowired
     public EntityStateHelper(DefinitionsManager definitionsManager, RuleEngineService ruleEngineService,
-                             ConditionResolverService conditionResolverService, ClaimRequestClient claimRequestClient) {
+                             ConditionResolverService conditionResolverService, ClaimRequestClient claimRequestClient,
+                             ObjectMapper objectMapper) {
         this.definitionsManager = definitionsManager;
         this.ruleEngineService = ruleEngineService;
         this.conditionResolverService = conditionResolverService;
         this.claimRequestClient = claimRequestClient;
+        this.objectMapper = objectMapper;
     }
 
     void applyWorkflowTransitions(JsonNode existing, JsonNode updated, List<AttestationPolicy> attestationPolicies) {
@@ -115,7 +119,7 @@ public class EntityStateHelper {
         String mobilePath = ownershipAttribute.getMobile();
         String emailPath = ownershipAttribute.getEmail();
         String userIdPath = ownershipAttribute.getUserId();
-        ObjectNode objectNode = new ObjectMapper().createObjectNode();
+        ObjectNode objectNode = objectMapper.createObjectNode();
         objectNode.put(MOBILE, entityNode.at(String.format("/%s%s", entityName, mobilePath)).asText(""));
         objectNode.put(EMAIL, entityNode.at(String.format("/%s%s", entityName, emailPath)).asText(""));
         objectNode.put(USER_ID, entityNode.at(String.format("/%s%s", entityName, userIdPath)).asText(""));

@@ -62,6 +62,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Configuration
 @EnableRetry
@@ -70,7 +71,7 @@ public class GenericConfiguration implements WebMvcConfigurer {
 
 	private static final String DOMAIN = "sunbirdrc.dev";
 	private static final String CREATOR = "sunbirdrc";
-	private static final String NONCE = "";
+	private static final String NONCE = UUID.randomUUID().toString();
 	private static final Logger logger = LoggerFactory.getLogger(GenericConfiguration.class);
 
 	static {
@@ -238,9 +239,9 @@ public class GenericConfiguration implements WebMvcConfigurer {
 			logger.info(definitionsManager.getAllDefinitions().size() + " definitions added to validator service ");
 			return validator;
 		} else {
-			logger.error("Fatal - not a known validator mentioned in the application configuration.");
+			throw new CustomException("Fatal - not a known validation type: " + validationType
+					+ ". Check the 'validation.type' property in application configuration.");
 		}
-		return null;
 	}
 
 	@Bean
@@ -345,9 +346,9 @@ public class GenericConfiguration implements WebMvcConfigurer {
 			try {
 				registry.addInterceptor(validationInterceptor()).addPathPatterns("/add").order(orderIdx++);
 			} catch (IOException e) {
-				e.printStackTrace();
+				logger.error("Failed to add validation interceptor due to IO error", e);
 			} catch (CustomException e) {
-				e.printStackTrace();
+				logger.error("Failed to add validation interceptor due to custom exception", e);
 			}
 		}
 	}

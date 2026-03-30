@@ -38,6 +38,9 @@ public class WebhookService {
 
             } catch (JsonProcessingException e) {
                 logger.error("Failed calling webhook event, {}", e.getMessage(), e);
+            } catch (Exception e) {
+                // TODO: Implement webhook authentication (HMAC signing) for secure event delivery
+                logger.error("Failed delivering webhook event, {}", e.getMessage(), e);
             }
         } else {
             logger.info("Webhook service is disabled");

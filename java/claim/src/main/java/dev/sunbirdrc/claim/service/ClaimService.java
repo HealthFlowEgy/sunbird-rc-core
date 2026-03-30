@@ -54,6 +54,9 @@ public class ClaimService {
         return claimRepository.findAll();
     }
 
+    // TODO: Consider adding a repository query method that filters by attestor entity and attestor conditions
+    // at the database level (e.g., findByAttestorEntityAndConditions) to avoid loading all claims into memory
+    // and filtering in Java. The ClaimRepository interface would need a custom query for this.
     public List<Claim> findClaimsForAttestor(String entity, JsonNode attestorNode) {
         List<Claim> claims = claimRepository.findByAttestorEntity(entity);
         logger.info("Found {} claims to process", claims.size());

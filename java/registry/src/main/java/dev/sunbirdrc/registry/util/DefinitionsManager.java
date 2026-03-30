@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.sunbirdrc.pojos.OwnershipsAttributes;
 import dev.sunbirdrc.registry.middleware.util.Constants;
-import org.apache.commons.collections.map.HashedMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map.Entry;
 
 import static dev.sunbirdrc.registry.Constants.TITLE;
@@ -22,8 +22,8 @@ import static dev.sunbirdrc.registry.Constants.TITLE;
 public class DefinitionsManager {
     private static Logger logger = LoggerFactory.getLogger(DefinitionsManager.class);
 
-    private Map<String, Definition> definitionMap = new HashMap<>();
-    private Map<String, Definition> derivedDefinitionMap = new HashedMap();
+    private Map<String, Definition> definitionMap = new ConcurrentHashMap<>();
+    private Map<String, Definition> derivedDefinitionMap = new ConcurrentHashMap<>();
 
     private OSResourceLoader osResourceLoader;
 
@@ -131,8 +131,6 @@ public class DefinitionsManager {
         return result;
     }
 
-    ;
-
     /**
      * Returns the map, where key is the index and value is the internal fields
      *
@@ -147,8 +145,9 @@ public class DefinitionsManager {
             List<String> privateFields = getDefinition(index)
                     .getOsSchemaConfiguration()
                     .getPrivateFields();
-            internalFields.addAll(privateFields);
-            result.put(index.toLowerCase(), new HashSet<>(internalFields));
+            List<String> combined = new ArrayList<>(internalFields);
+            combined.addAll(privateFields);
+            result.put(index.toLowerCase(), new HashSet<>(combined));
         }
         return result;
     }
@@ -163,11 +162,19 @@ public class DefinitionsManager {
     }
 
     public Object getCredentialTemplate(String entityName) {
-        return getDefinition(entityName).getOsSchemaConfiguration().getCredentialTemplate();
+        Definition definition = getDefinition(entityName);
+        if (definition == null) {
+            return null;
+        }
+        return definition.getOsSchemaConfiguration().getCredentialTemplate();
     }
 
     public Map<String, String> getCertificateTemplates(String entityName) {
-        return getDefinition(entityName).getOsSchemaConfiguration().getCertificateTemplates();
+        Definition definition = getDefinition(entityName);
+        if (definition == null) {
+            return Collections.emptyMap();
+        }
+        return definition.getOsSchemaConfiguration().getCertificateTemplates();
     }
 
     public boolean isValidEntityName(String entityName) {

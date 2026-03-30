@@ -13,7 +13,7 @@ import java.util.Base64;
 
 public class KeyCloakServiceImpl {
 
-	private static Logger logger = LoggerFactory.getLogger(KeyCloakServiceImpl.class);
+	private static final Logger logger = LoggerFactory.getLogger(KeyCloakServiceImpl.class);
 
 	private String ssoUrl;
 	private String ssoRealm;
@@ -37,13 +37,12 @@ public class KeyCloakServiceImpl {
 	 * @throws VerificationException
 	 * @throws Exception
 	 */
-	public String verifyToken(String accessToken) throws VerificationException, Exception {
+	public AccessToken verifyToken(String accessToken) throws VerificationException, Exception {
 		AccessToken token = RSATokenVerifier.verifyToken(accessToken, publicKey, ssoUrl + "realms/" + ssoRealm, true,
 				true);
-		String userId = token.getSubject();
 		logger.debug("Authentication token \n TokenId: {} \t isActive: {} \t isExpired: {} \t", token.getId(),
 				token.isActive(), token.isExpired());
-		return userId;
+		return token;
 	}
 
 	/**
@@ -60,7 +59,7 @@ public class KeyCloakServiceImpl {
 			KeyFactory keyFactory = KeyFactory.getInstance("RSA");
 			return keyFactory.generatePublic(keySpec);
 		} catch (Exception e) {
-			return null;
+			throw new IllegalStateException("Failed to parse public key - cannot start application", e);
 		}
 	}
 }

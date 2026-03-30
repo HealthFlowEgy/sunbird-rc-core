@@ -25,14 +25,29 @@ const getHandleBarTemplate = (credentialTemplate) => {
         return handleBarTemplate;
     }
 };
+/**
+ * Remove prototype pollution keys from an object recursively.
+ */
+function sanitizeData(obj) {
+    if (obj === null || typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) return obj.map(sanitizeData);
+    const clean = {};
+    for (const key of Object.keys(obj)) {
+        if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
+        clean[key] = sanitizeData(obj[key]);
+    }
+    return clean;
+}
+
 const generateCredentials = async (data, credentialTemplate = "") => {
-    console.log("Input received", credentialTemplate, data);
+    console.log("Credential generation request received");
+    const sanitizedData = sanitizeData(data);
     const template = getHandleBarTemplate(credentialTemplate);
-    let renderedTemplate = template(data);
+    let renderedTemplate = template(sanitizedData);
     //TODO: find better ways to escape literals
     renderedTemplate = renderedTemplate.replaceAll("\\","\\\\");
     const credentialData = JSON.parse(renderedTemplate);
-    console.log("Sending", credentialData);
+    console.log("Credential data prepared for signing");
     return await signJSON(credentialData);
 };
 

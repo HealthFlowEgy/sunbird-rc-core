@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.InvalidKeyException;
@@ -42,8 +43,9 @@ public class FileStorageService {
         if (!isBucketExists()) {
             logger.info("Bucket {} doesn't exist creating new bucket", bucketName);
             createNewBucket();
-            //TODO: check if this can go infinite loop
-            save(inputStream, objectName);
+            if (!isBucketExists()) {
+                throw new IOException("Failed to create bucket: " + bucketName);
+            }
         }
         logger.info("Saving the file in the location {}", objectName);
         minioClient.putObject(PutObjectArgs.builder()
@@ -80,8 +82,7 @@ public class FileStorageService {
                 documentsResponse.addDocumentLocation(objectName);
             } catch (Exception e) {
                 documentsResponse.addError(file.getOriginalFilename());
-                logger.error("Error has occurred while trying to save the file {}", fileName);
-                e.printStackTrace();
+                logger.error("Error has occurred while trying to save the file {}", fileName, e);
             }
         }
         return documentsResponse;
@@ -90,13 +91,21 @@ public class FileStorageService {
     private String getDirectoryPath(String requestedURI) {
         String versionDelimiter = "/v1/";
         String[] split = requestedURI.split(versionDelimiter);
-        return split[1];
+        String path = split[1];
+        if (path.contains("..")) {
+            throw new IllegalArgumentException("Invalid path");
+        }
+        return path;
     }
 
     @NotNull
-    private String getFileName(String file) {
+    private String getFileName(String originalFilename) {
+        if (originalFilename == null) {
+            throw new IllegalArgumentException("Original filename must not be null");
+        }
+        String sanitizedName = new File(originalFilename).getName();
         String uuid = UUID.randomUUID().toString();
-        return uuid + "-" + file;
+        return uuid + "-" + sanitizedName;
     }
 
     public DocumentsResponse deleteFiles(List<String> files) {
@@ -110,8 +119,7 @@ public class FileStorageService {
             try {
                 documentsResponse.addError(result.get().bucketName());
             } catch (Exception e) {
-                logger.error("Error has occurred while fetching the delete error result {}", e.getMessage());
-                e.printStackTrace();
+                logger.error("Error has occurred while fetching the delete error result {}", e.getMessage(), e);
             }
         }
         return documentsResponse;
@@ -130,16 +138,14 @@ public class FileStorageService {
     public byte[] getDocument(String requestedURI) {
         String objectName = getDirectoryPath(requestedURI);
         byte[] bytes = new byte[0];
-        try {
-            InputStream inputStream = minioClient.getObject(
-                    GetObjectArgs.builder()
-                            .bucket(bucketName)
-                            .object(objectName)
-                            .build());
+        try (InputStream inputStream = minioClient.getObject(
+                GetObjectArgs.builder()
+                        .bucket(bucketName)
+                        .object(objectName)
+                        .build())) {
             bytes = IOUtils.toByteArray(inputStream);
         } catch (Exception e) {
-            logger.error("Error has occurred while fetching the document {} {}", objectName, e.getMessage());
-            e.printStackTrace();
+            logger.error("Error has occurred while fetching the document {} {}", objectName, e.getMessage(), e);
         }
         return bytes;
     }
@@ -149,8 +155,7 @@ public class FileStorageService {
         try {
             minioClient.removeObject(RemoveObjectArgs.builder().bucket(bucketName).object(objectName).build());
         } catch (Exception e) {
-            logger.error("Error has occurred while deleting the document {}", objectName);
-            e.printStackTrace();
+            logger.error("Error has occurred while deleting the document {}", objectName, e);
             return new ResponseEntity(HttpStatus.BAD_REQUEST);
         }
         return new ResponseEntity(HttpStatus.OK);

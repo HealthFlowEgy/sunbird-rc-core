@@ -531,10 +531,12 @@ public class RegistryEntityController extends AbstractController {
     @GetMapping(value = "/api/v1/{entity}/{entityId}/attestationProperties")
     public ResponseEntity<Object> getEntityForAttestation(
             @PathVariable String entity,
-            @PathVariable String entityId
+            @PathVariable String entityId,
+            HttpServletRequest request
     ) {
         try {
-            JsonNode resultNode = registryHelper.readEntity("", entity, entityId, false, null, false);
+            String userId = getUserId(entity, request);
+            JsonNode resultNode = registryHelper.readEntity(userId, entity, entityId, false, null, false);
             ObjectNode objectNode = objectMapper.createObjectNode();
             objectNode.set("entity", resultNode.get(entity));
             List<AttestationPolicy> attestationPolicies = definitionsManager.getDefinition(entity)
@@ -575,8 +577,19 @@ public class RegistryEntityController extends AbstractController {
     public ResponseEntity<ResponseParams> updateProperty(
             @PathVariable String property,
             @PathVariable String propertyId,
-            @RequestBody JsonNode requestBody) {
+            @RequestBody JsonNode requestBody,
+            HttpServletRequest request) {
         logger.info("Got system request for the property {} {}", property, propertyId);
+        if (securityEnabled) {
+            try {
+                registryHelper.authorize(property, propertyId, request);
+            } catch (Exception e) {
+                ResponseParams rp = new ResponseParams();
+                rp.setStatus(Response.Status.UNSUCCESSFUL);
+                rp.setErrmsg("Unauthorized");
+                return new ResponseEntity<>(rp, HttpStatus.UNAUTHORIZED);
+            }
+        }
         ((ObjectNode) requestBody).put(uuidPropertyName, propertyId);
         ObjectNode newRootNode = objectMapper.createObjectNode();
 
@@ -601,8 +614,19 @@ public class RegistryEntityController extends AbstractController {
             @PathVariable String propertyId,
             @PathVariable String attestationName,
             @PathVariable String attestationId,
-            @RequestBody JsonNode requestBody) {
+            @RequestBody JsonNode requestBody,
+            HttpServletRequest request) {
         logger.info("Got system request to update attestation property {} {} {} {}", property, propertyId, attestationName, attestationId);
+        if (securityEnabled) {
+            try {
+                registryHelper.authorize(property, propertyId, request);
+            } catch (Exception e) {
+                ResponseParams rp = new ResponseParams();
+                rp.setStatus(Response.Status.UNSUCCESSFUL);
+                rp.setErrmsg("Unauthorized");
+                return new ResponseEntity<>(rp, HttpStatus.UNAUTHORIZED);
+            }
+        }
         ((ObjectNode) requestBody).put(uuidPropertyName, propertyId);
         ObjectNode newRootNode = objectMapper.createObjectNode();
 

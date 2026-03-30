@@ -6,12 +6,43 @@ const QRCode = require('qrcode');
 const JSZip = require("jszip");
 const { default: axios } = require('axios');
 const URL_W3C_VC = 'URL-W3C-VC';
-const URL = 'URL';
+const URL_TYPE = 'URL';
 const envData = require('../../configs/keys');
 const {CUSTOM_TEMPLATE_DELIMITERS} = require('../../configs/config');
 const delimiters = require('handlebars-delimiters');
 const NodeCache = require("node-cache");
 const hash = require('object-hash');
+
+/**
+ * Check if a URL is allowed (not targeting private/internal networks).
+ * Rejects URLs containing private IPs, localhost, and cloud metadata endpoints.
+ */
+function isAllowedUrl(urlString) {
+    try {
+        const parsed = new globalThis.URL(urlString);
+        const hostname = parsed.hostname.toLowerCase();
+        const disallowedPatterns = [
+            '169.254',
+            '127.0.0.1',
+            'localhost',
+            '10.',
+            '192.168',
+            '0.0.0.0',
+        ];
+        for (const pattern of disallowedPatterns) {
+            if (hostname.includes(pattern)) return false;
+        }
+        // Check 172.16.0.0 - 172.31.255.255 range
+        const match172 = hostname.match(/^172\.(\d+)\./);
+        if (match172) {
+            const second = parseInt(match172[1], 10);
+            if (second >= 16 && second <= 31) return false;
+        }
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
 
 const cacheInstance = new NodeCache();
 
@@ -21,6 +52,10 @@ const browserConfig = {
     //comment to use default
     executablePath: '/usr/bin/chromium-browser',
     args: [
+        // WARNING: --no-sandbox is used because Chromium runs inside a container where
+        // the sandbox requires kernel capabilities (CLONE_NEWUSER) that are typically
+        // unavailable. This is a known security trade-off. Ensure the container runs
+        // with minimal privileges and no untrusted content is rendered.
         "--no-sandbox",
         "--disable-gpu",
     ]
@@ -125,7 +160,7 @@ async function generateRawCertificate(certificate, templateUrl, entityId) {
     const qrCodeType = envData.qrType || '';
     let qrData;
     console.log('QR Code type: ', qrCodeType);
-    if (qrCodeType.toUpperCase() === URL) {
+    if (qrCodeType.toUpperCase() === URL_TYPE) {
         qrData = `${envData.certDomainUrl}/certs/${entityId}?t=${qrCodeType}`;
     } else {
         const zip = new JSZip();
@@ -170,7 +205,7 @@ async function getCertificatePDF(req, res) {
         if (!reqBody || isEmpty(reqBody)) {
             return sendResponse(res, 400, "Bad request");
         }
-        console.log('Got this req', reqBody);
+        console.log('Certificate request received');
         let {certificate, templateUrl, entityId} = reqBody;
         if (certificate === "" || templateUrl === "") {
             return sendResponse(res, 400, "Required parameters missing");
@@ -189,7 +224,7 @@ async function getCertificate(req, res) {
         if (!reqBody || isEmpty(reqBody)) {
             return sendResponse(res, 400, "Bad request");
         }
-        console.log('Got this req', reqBody);
+        console.log('Certificate request received');
         let {certificate, templateUrl, entityId} = reqBody;
         if (certificate === "" || templateUrl === "") {
             return sendResponse(res, 400, "Required parameters missing");
@@ -206,6 +241,9 @@ const fetchCachedTemplate = async (templateFileURL) => {
     console.log("Fetching credential templates: ", templateFileURL);
     const template = cacheInstance.get(templateFileURL);
     if (template === undefined) {
+        if (!isAllowedUrl(templateFileURL)) {
+            throw new Error("Template URL is not allowed: private or internal network addresses are rejected");
+        }
         let template = await axios.get(templateFileURL).then(res => res.data);
         cacheInstance.set(templateFileURL, template);
         console.debug("Fetched credential templates from API");

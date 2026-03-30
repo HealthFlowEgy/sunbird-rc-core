@@ -13,6 +13,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.HashMap;
 
@@ -31,7 +32,7 @@ public class ClaimRequestClient {
 
     public HashMap<String, Object> riseClaimRequest(ClaimDTO claimDTO) {
         HashMap<String, Object> hashMap = restTemplate.postForObject(claimRequestUrl + CLAIMS_PATH, claimDTO, HashMap.class);
-        logger.info("Claim has successfully risen {}", hashMap.toString());
+        logger.info("Claim has been successfully raised");
         return hashMap;
     }
 
@@ -46,12 +47,18 @@ public class ClaimRequestClient {
         ObjectNode requestBody = JsonNodeFactory.instance.objectNode();
         requestBody.set("attestorInfo", jsonNode);
         requestBody.put("entity", entityName);
-        return restTemplate.postForObject(claimRequestUrl + FETCH_CLAIMS_PATH + "/" + claimId, requestBody, JsonNode.class);
+        String url = UriComponentsBuilder.fromHttpUrl(claimRequestUrl + FETCH_CLAIMS_PATH)
+                .pathSegment(claimId)
+                .toUriString();
+        return restTemplate.postForObject(url, requestBody, JsonNode.class);
     }
 
     public ResponseEntity<Object> attestClaim(JsonNode attestationRequest, String claimId) {
+        String url = UriComponentsBuilder.fromHttpUrl(claimRequestUrl + CLAIMS_PATH)
+                .pathSegment(claimId)
+                .toUriString();
         return restTemplate.exchange(
-                claimRequestUrl + CLAIMS_PATH + "/" + claimId,
+                url,
                 HttpMethod.POST,
                 new HttpEntity<>(attestationRequest),
                 Object.class

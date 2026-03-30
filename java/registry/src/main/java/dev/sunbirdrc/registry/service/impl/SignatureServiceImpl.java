@@ -11,6 +11,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.util.UriUtils;
+
+import java.nio.charset.StandardCharsets;
 
 @Component
 public class SignatureServiceImpl implements SignatureService {
@@ -38,7 +41,7 @@ public class SignatureServiceImpl implements SignatureService {
 		boolean isSignServiceUp = false;
 		try {
 			ResponseEntity<String> response = retryRestTemplate.getForEntity(healthCheckURL);
-			if (response.getBody().equalsIgnoreCase("UP")) {
+			if ("UP".equalsIgnoreCase(response.getBody())) {
 				isSignServiceUp = true;
 				logger.debug("Signature service running !");
 			}
@@ -82,7 +85,7 @@ public class SignatureServiceImpl implements SignatureService {
 	@Override
 	public boolean verify(Object propertyValue)
 			throws SignatureException.UnreachableException, SignatureException.VerificationException {
-		logger.debug("verify method starts with value {}",propertyValue);
+		logger.debug("verify method starts");
 		ResponseEntity<String> response = null;
 		boolean result = false;
 		try {
@@ -109,11 +112,15 @@ public class SignatureServiceImpl implements SignatureService {
 	@Override
 	public String getKey(String keyId)
 			throws SignatureException.UnreachableException, SignatureException.KeyNotFoundException {
-		logger.debug("getKey method starts with value {}",keyId);
+		logger.debug("getKey method starts");
+		if (keyId == null || keyId.contains("..") || keyId.contains("/") || keyId.contains("\\")) {
+			throw new IllegalArgumentException("Invalid keyId");
+		}
+		String encodedKeyId = UriUtils.encodePathSegment(keyId, StandardCharsets.UTF_8);
 		ResponseEntity<String> response = null;
 		String result = null;
 		try {
-			response = retryRestTemplate.getForEntity(keysURL + "/" + keyId);
+			response = retryRestTemplate.getForEntity(keysURL + "/" + encodedKeyId);
 			result = response.getBody();
 		} catch (RestClientException ex) {
 			logger.error("RestClientException when verifying: ", ex);
@@ -122,7 +129,7 @@ public class SignatureServiceImpl implements SignatureService {
 			logger.error("RestClientException when verifying: ", e);
 			throw new SignatureException().new KeyNotFoundException(keyId);
 		}
-		logger.debug("getKey method ends with value {}",result);
+		logger.debug("getKey method ends");
 		return result;
 	}
 }

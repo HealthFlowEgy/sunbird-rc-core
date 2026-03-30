@@ -25,7 +25,7 @@ import java.util.Map;
 @Component
 public class EncryptionServiceImpl implements EncryptionService {
 
-	private static Logger logger = LoggerFactory.getLogger(EncryptionServiceImpl.class);
+	private static final Logger logger = LoggerFactory.getLogger(EncryptionServiceImpl.class);
 	@Value("${encryption.uri}")
 	private String encryptionUri;
 	@Value("${decryption.uri}")
@@ -52,7 +52,7 @@ public class EncryptionServiceImpl implements EncryptionService {
 	 */
 	@Override
 	public String encrypt(Object propertyValue) throws EncryptionException {
-		logger.debug("encrypt starts with value");
+		logger.debug("encrypt operation started");
 		MultiValueMap<String, Object> map = new LinkedMultiValueMap<>();
 		map.add("value", propertyValue);
 		HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<>(map);
@@ -60,8 +60,8 @@ public class EncryptionServiceImpl implements EncryptionService {
 			ResponseEntity<String> response = retryRestTemplate.postForEntity(encryptionUri, request);
 			return response.getBody();
 		} catch (ResourceAccessException e) {
-			logger.error("ResourceAccessException while connecting enryption service : ", e);
-			throw new EncryptionException("Exception while connecting enryption service! ");
+			logger.error("ResourceAccessException while connecting encryption service : ", e);
+			throw new EncryptionException("Exception while connecting encryption service! ");
 		} catch (Exception e) {
 			logger.error("Exception in encryption service !: ", e);
 			throw new EncryptionException("Exception in encryption service");
@@ -75,7 +75,7 @@ public class EncryptionServiceImpl implements EncryptionService {
 	 */
 	@Override
 	public String decrypt(Object propertyValue) throws EncryptionException {
-		logger.debug("decrypt starts with value {}", propertyValue);
+		logger.debug("decrypt operation started");
 		MultiValueMap<String, Object> map = new LinkedMultiValueMap<>();
 		map.add("value", propertyValue);
 		HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<>(map);
@@ -84,11 +84,11 @@ public class EncryptionServiceImpl implements EncryptionService {
 			logger.info("Property decrypted successfully !");
 			return response.getBody();
 		} catch (ResourceAccessException e) {
-			logger.error("ResourceAccessException while connecting dcryption service : ", e);
-			throw new EncryptionException("Exception while connecting enryption service ! ");
+			logger.error("ResourceAccessException while connecting decryption service : ", e);
+			throw new EncryptionException("Exception while connecting decryption service ! ");
 		} catch (Exception e) {
 			logger.error("Exception in decryption service !: ", e);
-			throw new EncryptionException("Exception in encryption service ! ");
+			throw new EncryptionException("Exception in decryption service ! ");
 		}
 	}
 
@@ -99,7 +99,7 @@ public class EncryptionServiceImpl implements EncryptionService {
 	 */
 	@Override
 	public Map<String, Object> encrypt(Map<String, Object> propertyValue) throws EncryptionException {
-		logger.debug("encrypt starts with value {}", propertyValue);
+		logger.debug("encrypt batch operation started");
 		Map<String, Object> map = new HashMap<>();
 		map.put("value", propertyValue);
 
@@ -113,10 +113,10 @@ public class EncryptionServiceImpl implements EncryptionService {
 			return gson.fromJson(response.getBody(), new TypeToken<HashMap<String, Object>>() {
 			}.getType());
 		} catch (ResourceAccessException e) {
-			logger.error("Exception while connecting enryption service : ", e);
-			throw new EncryptionException("Exception while connecting enryption service! ");
+			logger.error("Exception while connecting encryption service : ", e);
+			throw new EncryptionException("Exception while connecting encryption service! ");
 		} catch (Exception e) {
-			logger.error("Exception in encryption servie !: ", e);
+			logger.error("Exception in encryption service !: ", e);
 			throw new EncryptionException("Exception in encryption service.");
 		}
 	}
@@ -128,7 +128,7 @@ public class EncryptionServiceImpl implements EncryptionService {
 	 */
 	@Override
 	public Map<String, Object> decrypt(Map<String, Object> propertyValue) throws EncryptionException {
-		logger.debug("decrypt starts with value {}", propertyValue);
+		logger.debug("decrypt batch operation started");
 		Map<String, Object> map = new HashMap<>();
 		map.put("value", propertyValue);
 
@@ -143,11 +143,11 @@ public class EncryptionServiceImpl implements EncryptionService {
 			return gson.fromJson(response.getBody(), new TypeToken<HashMap<String, Object>>() {
 			}.getType());
 		} catch (ResourceAccessException e) {
-			logger.error("Exception while connecting dcryption service : ", e);
-			throw new EncryptionException("Exception while connecting enryption service ! ");
+			logger.error("Exception while connecting decryption service : ", e);
+			throw new EncryptionException("Exception while connecting decryption service ! ");
 		} catch (Exception e) {
 			logger.error("Exception in decryption service !: ", e);
-			throw new EncryptionException("Exception in encryption service ! ");
+			throw new EncryptionException("Exception in decryption service ! ");
 		}
 	}
 
@@ -161,7 +161,7 @@ public class EncryptionServiceImpl implements EncryptionService {
 		boolean isEncryptionServiceUp = false;
 		try {
 			ResponseEntity<String> response = retryRestTemplate.getForEntity(encryptionServiceHealthCheckUri);
-			if (response.getBody().equalsIgnoreCase("UP")) {
+			if ("UP".equalsIgnoreCase(response.getBody())) {
 				isEncryptionServiceUp = true;
 				logger.debug("Encryption service running !");
 			}

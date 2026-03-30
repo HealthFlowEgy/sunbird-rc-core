@@ -5,13 +5,18 @@ import dev.sunbirdrc.registry.exception.EncryptionException;
 import dev.sunbirdrc.registry.util.PrivateField;
 import org.springframework.stereotype.Component;
 
+import java.util.Iterator;
 import java.util.Map;
 
 @Component
 public class DecryptionHelper extends PrivateField {
 
     public JsonNode getDecryptedJson(JsonNode rootNode) throws EncryptionException {
-        String rootFieldName = rootNode.fieldNames().next();
+        Iterator<String> fieldNames = rootNode.fieldNames();
+        if (!fieldNames.hasNext()) {
+            throw new EncryptionException("Root node has no fields to decrypt");
+        }
+        String rootFieldName = fieldNames.next();
         process(rootNode.get(rootFieldName), rootFieldName, null);
         return rootNode;
     }

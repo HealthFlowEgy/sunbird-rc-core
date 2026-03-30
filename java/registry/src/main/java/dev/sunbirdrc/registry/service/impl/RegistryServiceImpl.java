@@ -46,7 +46,7 @@ import static dev.sunbirdrc.registry.Constants.Schema;
 public class RegistryServiceImpl implements RegistryService {
 
     private static final String ID_REGEX = "\"@id\"\\s*:\\s*\"_:[a-z][0-9]+\",";
-    private static Logger logger = LoggerFactory.getLogger(RegistryServiceImpl.class);
+    private static final Logger logger = LoggerFactory.getLogger(RegistryServiceImpl.class);
 
     @Autowired
     private EntityTypeHandler entityTypeHandler;
@@ -129,7 +129,7 @@ public class RegistryServiceImpl implements RegistryService {
         }
 
         healthCheck = new HealthCheckResponse(Constants.SUNBIRDRC_REGISTRY_API, overallHealthStatus, checks);
-        logger.info("Heath Check :  ", checks.toArray().toString());
+        logger.info("Health Check: {}", Arrays.toString(checks.toArray()));
         return healthCheck;
     }
 
@@ -186,6 +186,9 @@ public class RegistryServiceImpl implements RegistryService {
     public String addEntity(Shard shard, String userId, JsonNode rootNode, boolean skipSignature) throws Exception {
         Transaction tx = null;
         String entityId = "entityPlaceholderId";
+        if (!rootNode.fieldNames().hasNext()) {
+            throw new Exception("Root node has no fields");
+        }
         String vertexLabel = rootNode.fieldNames().next();
 
         systemFieldsHelper.ensureCreateAuditFields(vertexLabel, rootNode.get(vertexLabel), userId);
@@ -215,7 +218,9 @@ public class RegistryServiceImpl implements RegistryService {
                     dbProvider.commitTransaction(graph, tx);
                 }
             } finally {
-                tx.close();
+                if (tx != null) {
+                    tx.close();
+                }
             }
             // Add indices: executes only once.
             if (perRequestIndexCreation) {
@@ -286,22 +291,6 @@ public class RegistryServiceImpl implements RegistryService {
             // Merge the new changes
             JsonNode mergedNode = mergeWrapper("/" + parentEntityType, (ObjectNode) readNode, (ObjectNode) inputNode);
             logger.debug("After merge the payload is " + mergedNode.toString());
-
-            // Re-sign, i.e., remove and add entity signature again
-/*
-            if (signatureEnabled) {
-                logger.debug("Removing earlier signature and adding new one");
-                String entitySignUUID = signatureHelper.removeEntitySignature(parentEntityType, (ObjectNode) mergedNode);
-                JsonNode newSignature = signatureHelper.signJson(mergedNode);
-                String rootOsid = mergedNode.get(entityType).get(uuidPropertyName).asText();
-                ObjectNode objectSignNode = (ObjectNode) newSignature;
-                objectSignNode.put(uuidPropertyName, entitySignUUID);
-                objectSignNode.put(Constants.ROOT_KEYWORD, rootOsid);
-                Vertex oldEntitySignatureVertex = uuidVertexMap.get(entitySignUUID);
-
-                registryDao.updateVertex(graph, oldEntitySignatureVertex, newSignature, entityType);
-            }
-*/
 
             // TODO - Validate before update
             JsonNode validationNode = mergedNode.deepCopy();

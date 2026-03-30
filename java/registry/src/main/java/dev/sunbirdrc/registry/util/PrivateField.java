@@ -17,9 +17,9 @@ import java.util.Map;
 
 public class PrivateField {
     @Autowired
-    public EncryptionService encryptionService;
+    protected EncryptionService encryptionService;
     @Autowired
-    public DefinitionsManager definitionsManager;
+    protected DefinitionsManager definitionsManager;
     private Logger logger = LoggerFactory.getLogger(PrivateField.class);
 
     /**
@@ -68,7 +68,7 @@ public class PrivateField {
 
     protected JsonNode processPrivateFields(JsonNode element, String rootDefinitionName, String childFieldName) throws EncryptionException {
         JsonNode tempElement = element;
-        Definition definition = definitionsManager.getDefinition(rootDefinitionName);;
+        Definition definition = definitionsManager.getDefinition(rootDefinitionName);
         if (null != childFieldName) {
             String defnName = definition.getDefinitionNameForField(childFieldName);
             Definition childDefinition = definitionsManager.getDefinition(defnName);
@@ -125,7 +125,8 @@ public class PrivateField {
                     processArray((ArrayNode) entryValue, tempFieldName, entry.getKey());
                 }
             } catch (EncryptionException e) {
-                e.printStackTrace();
+                logger.error("Encryption/Decryption failed for field {}.{}", tempFieldName, "***", e);
+                throw e;
             }
         }
         return jsonNode;

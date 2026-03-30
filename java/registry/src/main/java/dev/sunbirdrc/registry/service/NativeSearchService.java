@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.UUID;
 
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Transaction;
@@ -62,7 +63,7 @@ public class NativeSearchService implements ISearchService {
 	private APIMessage apiMessage;
 
 	@Value("${database.uuidPropertyName}")
-	public String uuidPropertyName;
+	private String uuidPropertyName;
 
 	@Value("${search.offset}")
 	private int offset;
@@ -122,10 +123,10 @@ public class NativeSearchService implements ISearchService {
 						}
 
 						result.add(shardResult);
-						transaction.add(tx.hashCode());
+						transaction.add(UUID.randomUUID().toString());
 					}
 				} catch (Exception e) {
-					logger.error("search operation failed: {}", e);
+					logger.error("search operation failed", e);
 				} finally {
 					continueSearch = !isSpecificSearch;
 				}
@@ -136,7 +137,7 @@ public class NativeSearchService implements ISearchService {
 									.setTransactionId(transaction),
 							shard, searchQuery.getEntityTypes(), inputQueryNode);
 				} catch (Exception e) {
-					logger.error("Exception while auditing " + e);
+					logger.error("Exception while auditing", e);
 				}
 
 		 	}

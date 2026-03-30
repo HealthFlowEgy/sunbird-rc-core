@@ -40,12 +40,22 @@ public class SchemaLoader implements ApplicationListener<ContextRefreshedEvent> 
         objectNode.set("filters", JsonNodeFactory.instance.objectNode());
         try {
             JsonNode searchResults = searchService.search(objectNode);
-            searchResults.get(Schema).forEach(schemaNode -> {
-                definitionsManager.appendNewDefinition(schemaNode.get(Schema.toLowerCase()));
+            JsonNode schemaResults = searchResults.get(Schema);
+            if (schemaResults == null) {
+                logger.warn("No schema results found in search response");
+                return;
+            }
+            schemaResults.forEach(schemaNode -> {
+                JsonNode schemaDefinition = schemaNode.get(Schema.toLowerCase());
+                if (schemaDefinition != null) {
+                    definitionsManager.appendNewDefinition(schemaDefinition);
+                } else {
+                    logger.warn("Schema node missing '{}' field, skipping", Schema.toLowerCase());
+                }
             });
-            logger.info("Loaded {} schema from DB", searchResults.get(Schema).size());
+            logger.info("Loaded {} schema from DB", schemaResults.size());
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("Failed to load schemas from DB", e);
         }
     }
 }
